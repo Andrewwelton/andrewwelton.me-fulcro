@@ -1,32 +1,51 @@
 (ns app.ui.root
   (:require
-    [fulcro.client.dom :as dom :refer [div]]
-    [fulcro.client.primitives :as prim :refer [defsc]]
-    [fulcro.client.routing :refer [defrouter defsc-router]]    
-    [app.ui.components :as comp]))
+   [fulcro.client.dom :as dom :refer [div h3 a]]
+   [fulcro.client.primitives :as prim :refer [defsc]]
+   [fulcro.client.routing :as r :refer [defsc-router]]    
+   [app.ui.components :as comp]
+   [app.ui.components.home :as home]))
 
 (defsc Index [this {:keys [db/id router/page]}]
-  {:initial-state {:db/id 1 :router/page :PAGE/index}}
-  (div "Welcome to the home page")
-)
+  {:query [:db/id :router/page]
+   :ident (fn [] [page id])
+   :initial-state {:db/id 1 :router/page :PAGE/index}}
+  (home/ui-component-home))
 
-(defsc Root [this {:keys [ui/react-key comments]}]
-  {:query [:ui/react-key {:comments (prim/get-query comp/CommentList)}]
-   :initial-state (fn [params] {:comments (prim/get-initial-state comp/CommentList {})})}
-  (div :.ui.segments
-    (div :.ui.top.attached.segment
-      (div :.content
-        "Welcome to Fulcro!"))
-    (div :.ui.attached.segment
-      (div :.content
-        (comp/ui-placeholder {:w 50 :h 50})
-        (div "Some content here would be nice.")
-        (div "Yeah it would, wouldn't it?")
-        (comp/ui-comment-list comments)))))
+(defsc Blog [this {:keys [db/id router/page]}]
+  {:query [:db/id :router/page]
+   :ident (fn [] [page id])
+   :initial-state {:db/id 1 :router/page :PAGE/blog}})
+
+(defsc Work [this {:keys [db/id router/page]}]
+  {:query [:db/id :router/page]
+   :ident (fn [] [page id])
+   :initial-state {:db/id 1 :router/page :PAGE/work}})
 
 (defsc-router RootRouter [this {:keys [router/page db/id]}]
   {:router-id :root/router
    :ident (fn [] [page id])
    :default-route Index
-   :router-targets {:PAGE/index Index}}
+   :router-targets {:PAGE/index Index
+                    :PAGE/blog Blog
+                    :PAGE/work Work}}
   (div "You shouldn't be here my friend"))
+
+(def ui-root-router (prim/factory RootRouter))
+
+(defsc Root [this {:keys [router]}]
+  {:initial-state (fn [p] {:router (prim/get-initial-state RootRouter {})})
+   :query [{:router (prim/get-query RootRouter)}]}
+  (div :.ui.container.grid
+       (div :.row
+            (div :.column
+                 (h3 "Andrew Welton")))
+       (div :.row
+            (div :.column
+                 (div :.ui.secondary.menu
+                      (a :.item {:onClick #(prim/transact! this `[(r/set-route {:router :root/router :target [:PAGE/index 1]})])} "Home")
+                      (a :.item {:onClick #(prim/transact! this `[(r/set-route {:router :root/router :target [:PAGE/blog 1]})])} "Blog")
+                      (a :.item {:onClick #(prim/transact! this `[(r/set-route {:router :root/router :target [:PAGE/work 1]})])} "My Work"))))
+       (div :.row
+            (div :.column
+                 (ui-root-router router)))))
